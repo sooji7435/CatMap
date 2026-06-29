@@ -8,6 +8,7 @@ struct CatPreviewCard: View {
     @Environment(SupabaseService.self) private var supabase
     @State private var isLiked = false
     @State private var likeCount = 0
+    @State private var likeTask: Task<Void, Never>?
 
     private var live: CatSighting {
         supabase.sightings.first { $0.id == sighting.id } ?? sighting
@@ -115,11 +116,14 @@ struct CatPreviewCard: View {
     }
 
     private func likeToggle() {
-        let newLiked = !isLiked
-        isLiked = newLiked
-        likeCount += newLiked ? 1 : -1
-        Task {
-            try? await supabase.toggleLike(live)
+        isLiked.toggle()
+        likeCount += isLiked ? 1 : -1
+
+        likeTask?.cancel()
+        likeTask = Task {
+            try? await Task.sleep(for: .milliseconds(600))
+            guard !Task.isCancelled else { return }
+            try? await supabase.setLike(live, liked: isLiked)
         }
     }
 }

@@ -13,6 +13,7 @@ struct CatDetailView: View {
     @State private var showGallery = false
     @State private var isLiked = false
     @State private var likeCount = 0
+    @State private var likeTask: Task<Void, Never>?
 
     // 실시간 업데이트 반영
     private var live: CatSighting {
@@ -196,10 +197,15 @@ struct CatDetailView: View {
     // MARK: - Helpers
 
     private func likeToggle() {
-        let newLiked = !isLiked
-        isLiked = newLiked
-        likeCount += newLiked ? 1 : -1
-        Task { try? await supabase.toggleLike(live) }
+        isLiked.toggle()
+        likeCount += isLiked ? 1 : -1
+
+        likeTask?.cancel()
+        likeTask = Task {
+            try? await Task.sleep(for: .milliseconds(600))
+            guard !Task.isCancelled else { return }
+            try? await supabase.setLike(live, liked: isLiked)
+        }
     }
 
     private var addPhotoBinding: Binding<UIImage?> {

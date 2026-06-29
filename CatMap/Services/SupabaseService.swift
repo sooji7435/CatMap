@@ -168,18 +168,19 @@ final class SupabaseService {
         }
     }
 
-    func toggleLike(_ sighting: CatSighting) async throws {
+    func setLike(_ sighting: CatSighting, liked: Bool) async throws {
         let key = "liked_\(sighting.id.uuidString)"
-        let alreadyLiked = UserDefaults.standard.bool(forKey: key)
-        let newLikes = max(0, sighting.likes + (alreadyLiked ? -1 : 1))
+        let wasLiked = UserDefaults.standard.bool(forKey: key)
+        guard liked != wasLiked else { return }
 
+        let newLikes = max(0, sighting.likes + (liked ? 1 : -1))
         try await client
             .from("sightings")
             .update(["likes": newLikes])
             .eq("id", value: sighting.id.uuidString)
             .execute()
 
-        UserDefaults.standard.set(!alreadyLiked, forKey: key)
+        UserDefaults.standard.set(liked, forKey: key)
     }
 
     func isLiked(_ sighting: CatSighting) -> Bool {
