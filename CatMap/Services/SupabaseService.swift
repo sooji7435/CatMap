@@ -86,25 +86,7 @@ final class SupabaseService {
         isUploading = true
         defer { isUploading = false }
 
-        var photoURLs: [String] = []
-        var photoStoragePaths: [String] = []
-
-        for image in images {
-            guard let data = image.jpegData(compressionQuality: 0.8) else { continue }
-            let fileName = "\(UUID().uuidString).jpg"
-            photoStoragePaths.append(fileName)
-
-            try await client.storage
-                .from("photos")
-                .upload(path: fileName, file: data, options: FileOptions(contentType: "image/jpeg"))
-
-            let url = try client.storage
-                .from("photos")
-                .getPublicURL(path: fileName)
-                .absoluteString
-            photoURLs.append(url)
-        }
-
+        let (photoURLs, photoStoragePaths) = try await uploadImages(images)
         let locationName = await reverseGeocode(latitude: latitude, longitude: longitude)
 
         try await client
@@ -127,30 +109,35 @@ final class SupabaseService {
         isUploading = true
         defer { isUploading = false }
 
-        var newURLs = sighting.photoURLs
-        var newPaths = sighting.photoStoragePaths
+        let (newURLs, newPaths) = try await uploadImages(images)
 
+        try await client
+            .from("sightings")
+            .update(PhotosUpdate(
+                photoURLs: sighting.photoURLs + newURLs,
+                photoStoragePaths: sighting.photoStoragePaths + newPaths
+            ))
+            .eq("id", value: sighting.id.uuidString)
+            .execute()
+    }
+
+    private func uploadImages(_ images: [UIImage]) async throws -> (urls: [String], paths: [String]) {
+        var urls: [String] = []
+        var paths: [String] = []
         for image in images {
             guard let data = image.jpegData(compressionQuality: 0.8) else { continue }
             let fileName = "\(UUID().uuidString).jpg"
-            newPaths.append(fileName)
-
+            paths.append(fileName)
             try await client.storage
                 .from("photos")
                 .upload(path: fileName, file: data, options: FileOptions(contentType: "image/jpeg"))
-
             let url = try client.storage
                 .from("photos")
                 .getPublicURL(path: fileName)
                 .absoluteString
-            newURLs.append(url)
+            urls.append(url)
         }
-
-        try await client
-            .from("sightings")
-            .update(PhotosUpdate(photoURLs: newURLs, photoStoragePaths: newPaths))
-            .eq("id", value: sighting.id.uuidString)
-            .execute()
+        return (urls, paths)
     }
 
     private func reverseGeocode(latitude: Double, longitude: Double) async -> String? {

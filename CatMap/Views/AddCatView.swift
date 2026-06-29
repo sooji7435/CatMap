@@ -1,6 +1,5 @@
 import SwiftUI
 import CoreLocation
-internal import _LocationEssentials
 
 struct AddCatView: View {
     @Environment(\.dismiss) private var dismiss
@@ -248,7 +247,6 @@ struct AddCatView: View {
 
     // MARK: - Bindings & actions
 
-    /// 사진 선택 즉시 추가 → 백그라운드에서 탐지 후 결과 업데이트
     private var photoBinding: Binding<UIImage?> {
         Binding(
             get: { nil },

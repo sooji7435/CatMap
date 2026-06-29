@@ -2,7 +2,6 @@ import Vision
 import UIKit
 
 enum CatDetector {
-    /// 이미지에 고양이가 있으면 true. Vision 오류 시 true(허용)로 fallback.
     static func containsCat(in image: UIImage) async -> Bool {
         guard let cgImage = image.cgImage else { return true }
 
