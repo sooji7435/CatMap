@@ -49,7 +49,6 @@ struct ContentView: View {
             UserAnnotation()
         }
         .mapControls {
-            MapUserLocationButton()
             MapCompass()
             MapScaleView()
         }
@@ -58,7 +57,14 @@ struct ContentView: View {
             cameraDistance = context.camera.distance
         }
         .ignoresSafeArea()
-        .overlay(alignment: .topTrailing) { refreshButton }
+        .overlay(alignment: .topTrailing) {
+            VStack(spacing: 8) {
+                refreshButton
+                locationButton
+            }
+            .padding(.top, 56)
+            .padding(.trailing, 12)
+        }
     }
 
     // MARK: - Bottom overlay
@@ -103,8 +109,20 @@ struct ContentView: View {
                 .clipShape(Circle())
                 .shadow(color: .black.opacity(0.1), radius: 3, y: 1)
         }
-        .padding(.top, 56)
-        .padding(.trailing, 12)
+    }
+
+    private var locationButton: some View {
+        Button {
+            withAnimation { cameraPosition = .userLocation(fallback: .automatic) }
+        } label: {
+            Image(systemName: "location.fill")
+                .font(.subheadline.bold())
+                .foregroundStyle(.blue)
+                .frame(width: 36, height: 36)
+                .background(.thinMaterial)
+                .clipShape(Circle())
+                .shadow(color: .black.opacity(0.1), radius: 3, y: 1)
+        }
     }
 
     private var addButton: some View {
