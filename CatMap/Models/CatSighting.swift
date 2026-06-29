@@ -11,11 +11,12 @@ struct CatSighting: Identifiable, Codable, Equatable {
     var date: Date
     var likes: Int
 
+    var name: String?
     var userId: UUID?
     var locationName: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, latitude, longitude, note, date, likes
+        case id, latitude, longitude, note, date, likes, name
         case photoURLs = "photo_urls"
         case photoStoragePaths = "photo_storage_paths"
         case userId = "user_id"

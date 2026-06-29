@@ -16,6 +16,7 @@ struct CatDetailView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     photoGallery
+                    headerSection
                     infoSection
                     miniMapSection
                 }
@@ -100,6 +101,36 @@ struct CatDetailView: View {
         }
     }
 
+    private var headerSection: some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 4) {
+                if let name = sighting.name, !name.isEmpty {
+                    Text(name)
+                        .font(.title2.bold())
+                }
+                Label(
+                    sighting.locationName ?? String(format: "%.5f, %.5f", sighting.latitude, sighting.longitude),
+                    systemImage: "location"
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Button { likeToggle() } label: {
+                VStack(spacing: 2) {
+                    Image(systemName: isLiked ? "heart.fill" : "heart")
+                        .font(.title2)
+                        .foregroundStyle(.red)
+                    Text("\(likeCount)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 12)
+    }
+
     private var infoSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             if !sighting.note.isEmpty {
@@ -107,34 +138,14 @@ struct CatDetailView: View {
                     .font(.body)
             }
 
-            Button {
-                likeToggle()
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: isLiked ? "heart.fill" : "heart")
-                        .foregroundStyle(.red)
-                        .font(.title3)
-                    Text(isLiked ? "좋아요 취소" : "좋아요")
-                        .font(.subheadline)
-                    Text("(\(likeCount))")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
             Divider()
 
-            VStack(alignment: .leading, spacing: 6) {
-                Label(sighting.date.formatted(date: .long, time: .shortened), systemImage: "calendar")
-                Label(
-                    sighting.locationName ?? String(format: "%.5f, %.5f", sighting.latitude, sighting.longitude),
-                    systemImage: "location"
-                )
-            }
-            .font(.caption)
-            .foregroundStyle(.secondary)
+            Label(sighting.date.formatted(date: .long, time: .shortened), systemImage: "calendar")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
-        .padding()
+        .padding(.horizontal)
+        .padding(.bottom, 8)
     }
 
     private var miniMapSection: some View {

@@ -52,15 +52,9 @@ struct CatPreviewCard: View {
 
     private var info: some View {
         VStack(alignment: .leading, spacing: 5) {
-            if !sighting.note.isEmpty {
-                Text(sighting.note)
-                    .font(.subheadline.bold())
-                    .lineLimit(1)
-            } else {
-                Text("길냥이")
-                    .font(.subheadline.bold())
-                    .foregroundStyle(.secondary)
-            }
+            Text(sighting.name?.isEmpty == false ? sighting.name! : (sighting.note.isEmpty ? "이름 없는 고양이" : sighting.note))
+                .font(.subheadline.bold())
+                .lineLimit(1)
             if let name = sighting.locationName {
                 Label(name, systemImage: "location")
                     .font(.caption)

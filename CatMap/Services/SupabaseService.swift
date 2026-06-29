@@ -78,7 +78,7 @@ final class SupabaseService {
         }
     }
 
-    func addSighting(latitude: Double, longitude: Double, images: [UIImage], note: String) async throws {
+    func addSighting(latitude: Double, longitude: Double, images: [UIImage], name: String?, note: String) async throws {
         isUploading = true
         defer { isUploading = false }
 
@@ -111,6 +111,7 @@ final class SupabaseService {
                 photoURLs: photoURLs,
                 photoStoragePaths: photoStoragePaths,
                 note: note,
+                name: name,
                 userId: currentUserId,
                 locationName: locationName
             ))
@@ -171,11 +172,12 @@ private struct SightingInsert: Encodable {
     let photoURLs: [String]
     let photoStoragePaths: [String]
     let note: String
+    let name: String?
     let userId: UUID?
     let locationName: String?
 
     enum CodingKeys: String, CodingKey {
-        case latitude, longitude, note
+        case latitude, longitude, note, name
         case photoURLs = "photo_urls"
         case photoStoragePaths = "photo_storage_paths"
         case userId = "user_id"

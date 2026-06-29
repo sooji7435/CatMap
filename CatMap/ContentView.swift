@@ -144,9 +144,21 @@ struct CatPinView: View {
     let isAnimating: Bool
 
     var body: some View {
-        pinContent
-            .scaleEffect(isAnimating ? 1.35 : 1.0)
-            .animation(.spring(response: 0.4, dampingFraction: 0.5), value: isAnimating)
+        VStack(spacing: 2) {
+            if let name = sighting.name, !name.isEmpty {
+                Text(name)
+                    .font(.caption2.bold())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(.orange)
+                    .clipShape(Capsule())
+                    .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
+            }
+            pinContent
+        }
+        .scaleEffect(isAnimating ? 1.35 : 1.0)
+        .animation(.spring(response: 0.4, dampingFraction: 0.5), value: isAnimating)
     }
 
     @ViewBuilder

@@ -8,6 +8,7 @@ struct AddCatView: View {
     @Environment(LocationManager.self) private var locationManager
 
     @State private var selectedImages: [UIImage] = []
+    @State private var catName = ""
     @State private var note = ""
     @State private var showCamera = false
     @State private var showGallery = false
@@ -70,6 +71,10 @@ struct AddCatView: View {
                     Text("\(selectedImages.count) / \(maxPhotos)장")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                }
+
+                Section("이름 / 별명 (선택)") {
+                    TextField("예) 삼색이, 까망이, 턱시도", text: $catName)
                 }
 
                 Section("메모 (선택)") {
@@ -162,6 +167,7 @@ struct AddCatView: View {
                     latitude: location.coordinate.latitude,
                     longitude: location.coordinate.longitude,
                     images: selectedImages,
+                    name: catName.isEmpty ? nil : catName,
                     note: note
                 )
                 dismiss()
