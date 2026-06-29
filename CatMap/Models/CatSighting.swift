@@ -1,7 +1,7 @@
 import Foundation
 import CoreLocation
 
-struct CatSighting: Identifiable, Codable {
+struct CatSighting: Identifiable, Codable, Equatable {
     var id: UUID
     var latitude: Double
     var longitude: Double
