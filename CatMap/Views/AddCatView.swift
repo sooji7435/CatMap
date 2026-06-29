@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreLocation
 internal import _LocationEssentials
 
 struct AddCatView: View {
@@ -12,6 +13,7 @@ struct AddCatView: View {
     @State private var showGallery = false
     @State private var showSourcePicker = false
     @State private var errorMessage: String?
+    @State private var locationName: String?
 
     private let maxPhotos = 5
 
@@ -76,13 +78,10 @@ struct AddCatView: View {
                 }
 
                 Section("현재 위치") {
-                    if let loc = locationManager.location {
-                        Label(
-                            String(format: "%.5f, %.5f", loc.coordinate.latitude, loc.coordinate.longitude),
-                            systemImage: "location.fill"
-                        )
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    if locationManager.location != nil {
+                        Label(locationName ?? "위치 확인 중...", systemImage: "location.fill")
+                            .font(.subheadline)
+                            .foregroundStyle(locationName == nil ? .secondary : .primary)
                     } else {
                         Label("위치를 가져오는 중...", systemImage: "location.circle")
                             .foregroundStyle(.secondary)
@@ -119,6 +118,10 @@ struct AddCatView: View {
                 Button("앨범에서 선택") { showGallery = true }
                 Button("취소", role: .cancel) {}
             }
+            .task {
+                guard let loc = locationManager.location else { return }
+                locationName = await geocode(loc)
+            }
             .sheet(isPresented: $showCamera) {
                 ImagePicker(image: singleImageBinding, sourceType: .camera)
                     .ignoresSafeArea()
@@ -126,6 +129,19 @@ struct AddCatView: View {
             .sheet(isPresented: $showGallery) {
                 ImagePicker(image: singleImageBinding, sourceType: .photoLibrary)
                     .ignoresSafeArea()
+            }
+        }
+    }
+
+    private func geocode(_ location: CLLocation) async -> String? {
+        await withCheckedContinuation { continuation in
+            CLGeocoder().reverseGeocodeLocation(location) { placemarks, _ in
+                guard let p = placemarks?.first else {
+                    continuation.resume(returning: nil)
+                    return
+                }
+                let parts = [p.locality, p.subLocality].compactMap { $0 }
+                continuation.resume(returning: parts.isEmpty ? nil : parts.joined(separator: " "))
             }
         }
     }

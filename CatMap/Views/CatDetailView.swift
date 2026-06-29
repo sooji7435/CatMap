@@ -127,7 +127,7 @@ struct CatDetailView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Label(sighting.date.formatted(date: .long, time: .shortened), systemImage: "calendar")
                 Label(
-                    String(format: "%.5f, %.5f", sighting.latitude, sighting.longitude),
+                    sighting.locationName ?? String(format: "%.5f, %.5f", sighting.latitude, sighting.longitude),
                     systemImage: "location"
                 )
             }

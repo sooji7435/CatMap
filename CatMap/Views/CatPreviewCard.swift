@@ -61,9 +61,15 @@ struct CatPreviewCard: View {
                     .font(.subheadline.bold())
                     .foregroundStyle(.secondary)
             }
-            Text(sighting.date.formatted(date: .abbreviated, time: .shortened))
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            if let name = sighting.locationName {
+                Label(name, systemImage: "location")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text(sighting.date.formatted(date: .abbreviated, time: .shortened))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
 
             if sighting.photoURLs.count > 1 {
                 Label("\(sighting.photoURLs.count)장", systemImage: "photo.on.rectangle")

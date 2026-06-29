@@ -1,6 +1,7 @@
 import Foundation
 import Supabase
 import UIKit
+import CoreLocation
 
 @Observable
 @MainActor
@@ -100,6 +101,8 @@ final class SupabaseService {
             photoURLs.append(url)
         }
 
+        let locationName = await reverseGeocode(latitude: latitude, longitude: longitude)
+
         try await client
             .from("sightings")
             .insert(SightingInsert(
@@ -108,9 +111,25 @@ final class SupabaseService {
                 photoURLs: photoURLs,
                 photoStoragePaths: photoStoragePaths,
                 note: note,
-                userId: currentUserId
+                userId: currentUserId,
+                locationName: locationName
             ))
             .execute()
+    }
+
+    private func reverseGeocode(latitude: Double, longitude: Double) async -> String? {
+        let location = CLLocation(latitude: latitude, longitude: longitude)
+        let geocoder = CLGeocoder()
+        return await withCheckedContinuation { continuation in
+            geocoder.reverseGeocodeLocation(location) { placemarks, _ in
+                guard let p = placemarks?.first else {
+                    continuation.resume(returning: nil)
+                    return
+                }
+                let parts = [p.locality, p.subLocality].compactMap { $0 }
+                continuation.resume(returning: parts.isEmpty ? nil : parts.joined(separator: " "))
+            }
+        }
     }
 
     func deleteSighting(_ sighting: CatSighting) async throws {
@@ -153,11 +172,13 @@ private struct SightingInsert: Encodable {
     let photoStoragePaths: [String]
     let note: String
     let userId: UUID?
+    let locationName: String?
 
     enum CodingKeys: String, CodingKey {
         case latitude, longitude, note
         case photoURLs = "photo_urls"
         case photoStoragePaths = "photo_storage_paths"
         case userId = "user_id"
+        case locationName = "location_name"
     }
 }
