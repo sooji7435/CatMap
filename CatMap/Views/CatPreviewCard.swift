@@ -30,13 +30,8 @@ struct CatPreviewCard: View {
     private var thumbnail: some View {
         Group {
             if let url = sighting.firstPhotoURL {
-                AsyncImage(url: url) { phase in
-                    if case .success(let image) = phase {
-                        image.resizable().scaledToFill()
-                    } else {
-                        catPlaceholder
-                    }
-                }
+                CachedAsyncImage(url: url)
+                    .scaledToFill()
             } else {
                 catPlaceholder
             }

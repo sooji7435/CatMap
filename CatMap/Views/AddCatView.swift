@@ -162,7 +162,7 @@ struct AddCatView: View {
                 } label: {
                     HStack {
                         Image(systemName: s.systemImage)
-                            .foregroundStyle(statusColor(s))
+                            .foregroundStyle(s.color)
                             .frame(width: 20)
                         Text(s.label)
                         Spacer()
@@ -197,14 +197,6 @@ struct AddCatView: View {
     }
 
     // MARK: - Helpers
-
-    private func statusColor(_ s: CatStatus) -> Color {
-        switch s {
-        case .healthy: return .green
-        case .injured: return .red
-        case .kitten:  return .blue
-        }
-    }
 
     private func geocode(_ location: CLLocation) async -> String? {
         await withCheckedContinuation { continuation in

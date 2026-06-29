@@ -43,7 +43,7 @@ struct CatShareCard: View {
                 if let s = sighting.catStatus {
                     Label(s.label, systemImage: s.systemImage)
                         .font(.caption.bold())
-                        .foregroundStyle(statusColor(s))
+                        .foregroundStyle(s.color)
                 }
 
                 Label(
@@ -70,13 +70,6 @@ struct CatShareCard: View {
         .padding(16)
     }
 
-    private func statusColor(_ s: CatStatus) -> Color {
-        switch s {
-        case .healthy: return .green
-        case .injured: return .red
-        case .kitten:  return .blue
-        }
-    }
 }
 
 /// ShareLink용 Transferable PNG 래퍼

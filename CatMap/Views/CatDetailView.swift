@@ -121,7 +121,7 @@ struct CatDetailView: View {
                 .font(.caption.bold())
                 .foregroundStyle(.white)
                 .padding(.horizontal, 10).padding(.vertical, 5)
-                .background(statusColor(s))
+                .background(s.color)
                 .clipShape(Capsule())
                 .padding(.horizontal)
                 .padding(.top, 12)
@@ -197,14 +197,6 @@ struct CatDetailView: View {
         isLiked = newLiked
         likeCount += newLiked ? 1 : -1
         Task { try? await supabase.toggleLike(live) }
-    }
-
-    private func statusColor(_ s: CatStatus) -> Color {
-        switch s {
-        case .healthy: return .green
-        case .injured: return .red
-        case .kitten:  return .blue
-        }
     }
 
     private var addPhotoBinding: Binding<UIImage?> {
