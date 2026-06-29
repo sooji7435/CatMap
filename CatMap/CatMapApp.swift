@@ -5,6 +5,10 @@ struct CatMapApp: App {
     @State private var supabase = SupabaseService()
     @State private var locationManager = LocationManager()
 
+    init() {
+        UITabBar.appearance().tintColor = .systemOrange
+    }
+
     var body: some Scene {
         WindowGroup {
             TabView {
@@ -13,7 +17,6 @@ struct CatMapApp: App {
                 MyRecordsView()
                     .tabItem { Label("내 기록", systemImage: "pawprint.fill") }
             }
-            .tint(.orange)
             .environment(supabase)
             .environment(locationManager)
             .onAppear {
