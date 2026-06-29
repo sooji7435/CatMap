@@ -36,6 +36,10 @@ final class SupabaseService {
         Task { await channel?.unsubscribe() }
     }
 
+    func refresh() async {
+        await loadSightings()
+    }
+
     func isOwner(_ sighting: CatSighting) -> Bool {
         guard let currentUserId, let sightingUserId = sighting.userId else { return false }
         return currentUserId == sightingUserId
@@ -78,7 +82,7 @@ final class SupabaseService {
         }
     }
 
-    func addSighting(latitude: Double, longitude: Double, images: [UIImage], name: String?, note: String) async throws {
+    func addSighting(latitude: Double, longitude: Double, images: [UIImage], name: String?, note: String, status: String?) async throws {
         isUploading = true
         defer { isUploading = false }
 
@@ -113,16 +117,46 @@ final class SupabaseService {
                 note: note,
                 name: name,
                 userId: currentUserId,
-                locationName: locationName
+                locationName: locationName,
+                status: status
             ))
+            .execute()
+    }
+
+    func addPhotos(to sighting: CatSighting, images: [UIImage]) async throws {
+        isUploading = true
+        defer { isUploading = false }
+
+        var newURLs = sighting.photoURLs
+        var newPaths = sighting.photoStoragePaths
+
+        for image in images {
+            guard let data = image.jpegData(compressionQuality: 0.8) else { continue }
+            let fileName = "\(UUID().uuidString).jpg"
+            newPaths.append(fileName)
+
+            try await client.storage
+                .from("photos")
+                .upload(path: fileName, file: data, options: FileOptions(contentType: "image/jpeg"))
+
+            let url = try client.storage
+                .from("photos")
+                .getPublicURL(path: fileName)
+                .absoluteString
+            newURLs.append(url)
+        }
+
+        try await client
+            .from("sightings")
+            .update(PhotosUpdate(photoURLs: newURLs, photoStoragePaths: newPaths))
+            .eq("id", value: sighting.id.uuidString)
             .execute()
     }
 
     private func reverseGeocode(latitude: Double, longitude: Double) async -> String? {
         let location = CLLocation(latitude: latitude, longitude: longitude)
-        let geocoder = CLGeocoder()
         return await withCheckedContinuation { continuation in
-            geocoder.reverseGeocodeLocation(location) { placemarks, _ in
+            CLGeocoder().reverseGeocodeLocation(location) { placemarks, _ in
                 guard let p = placemarks?.first else {
                     continuation.resume(returning: nil)
                     return
@@ -175,12 +209,23 @@ private struct SightingInsert: Encodable {
     let name: String?
     let userId: UUID?
     let locationName: String?
+    let status: String?
 
     enum CodingKeys: String, CodingKey {
-        case latitude, longitude, note, name
+        case latitude, longitude, note, name, status
         case photoURLs = "photo_urls"
         case photoStoragePaths = "photo_storage_paths"
         case userId = "user_id"
         case locationName = "location_name"
+    }
+}
+
+private struct PhotosUpdate: Encodable {
+    let photoURLs: [String]
+    let photoStoragePaths: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case photoURLs = "photo_urls"
+        case photoStoragePaths = "photo_storage_paths"
     }
 }

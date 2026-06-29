@@ -8,14 +8,23 @@ struct CatDetailView: View {
     let sighting: CatSighting
 
     @State private var showDeleteAlert = false
+    @State private var showAddPhotoSource = false
+    @State private var showCamera = false
+    @State private var showGallery = false
     @State private var isLiked = false
     @State private var likeCount = 0
+
+    // 실시간 업데이트 반영
+    private var live: CatSighting {
+        supabase.sightings.first { $0.id == sighting.id } ?? sighting
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     photoGallery
+                    statusBadge
                     headerSection
                     infoSection
                     miniMapSection
@@ -27,27 +36,45 @@ struct CatDetailView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("닫기") { dismiss() }
                 }
-                if supabase.isOwner(sighting) {
-                    ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
+                    HStack(spacing: 12) {
                         Button {
-                            showDeleteAlert = true
+                            showAddPhotoSource = true
                         } label: {
-                            Image(systemName: "trash")
-                                .foregroundStyle(.red)
+                            Image(systemName: supabase.isUploading ? "arrow.triangle.2.circlepath" : "photo.badge.plus")
+                                .foregroundStyle(.orange)
+                        }
+                        .disabled(supabase.isUploading)
+
+                        if supabase.isOwner(live) {
+                            Button {
+                                showDeleteAlert = true
+                            } label: {
+                                Image(systemName: "trash")
+                                    .foregroundStyle(.red)
+                            }
                         }
                     }
                 }
             }
             .alert("삭제할까요?", isPresented: $showDeleteAlert) {
                 Button("삭제", role: .destructive) {
-                    Task {
-                        try? await supabase.deleteSighting(sighting)
-                        dismiss()
-                    }
+                    Task { try? await supabase.deleteSighting(live); dismiss() }
                 }
                 Button("취소", role: .cancel) {}
             } message: {
                 Text("이 길냥이 기록이 삭제됩니다.")
+            }
+            .confirmationDialog("사진 선택", isPresented: $showAddPhotoSource) {
+                Button("카메라로 찍기") { showCamera = true }
+                Button("앨범에서 선택") { showGallery = true }
+                Button("취소", role: .cancel) {}
+            }
+            .sheet(isPresented: $showCamera) {
+                ImagePicker(image: addPhotoBinding, sourceType: .camera).ignoresSafeArea()
+            }
+            .sheet(isPresented: $showGallery) {
+                ImagePicker(image: addPhotoBinding, sourceType: .photoLibrary).ignoresSafeArea()
             }
         }
         .onAppear {
@@ -56,43 +83,27 @@ struct CatDetailView: View {
         }
     }
 
+    // MARK: - Photo gallery with pinch zoom
+
     @ViewBuilder
     private var photoGallery: some View {
-        if !sighting.photoURLs.isEmpty {
+        if !live.photoURLs.isEmpty {
             TabView {
-                ForEach(sighting.photoURLs, id: \.self) { urlString in
+                ForEach(live.photoURLs, id: \.self) { urlString in
                     if let url = URL(string: urlString) {
-                        AsyncImage(url: url) { phase in
-                            switch phase {
-                            case .success(let image):
-                                image
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(maxWidth: .infinity)
-                            case .failure:
-                                Color.gray.opacity(0.15)
-                                    .overlay(
-                                        Image(systemName: "photo")
-                                            .font(.largeTitle)
-                                            .foregroundStyle(.secondary)
-                                    )
-                            default:
-                                Color.gray.opacity(0.1)
-                                    .overlay(ProgressView())
-                            }
-                        }
+                        ZoomableAsyncImage(url: url)
+                            .frame(maxWidth: .infinity)
                     }
                 }
             }
             .tabViewStyle(.page)
             .frame(height: 300)
             .overlay(alignment: .bottomTrailing) {
-                if sighting.photoURLs.count > 1 {
-                    Text("\(sighting.photoURLs.count)장")
+                if live.photoURLs.count > 1 {
+                    Text("\(live.photoURLs.count)장")
                         .font(.caption.bold())
                         .foregroundStyle(.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
+                        .padding(.horizontal, 8).padding(.vertical, 4)
                         .background(.black.opacity(0.45))
                         .clipShape(Capsule())
                         .padding(10)
@@ -101,15 +112,32 @@ struct CatDetailView: View {
         }
     }
 
+    // MARK: - Status badge
+
+    @ViewBuilder
+    private var statusBadge: some View {
+        if let s = live.catStatus {
+            Label(s.label, systemImage: s.systemImage)
+                .font(.caption.bold())
+                .foregroundStyle(.white)
+                .padding(.horizontal, 10).padding(.vertical, 5)
+                .background(statusColor(s))
+                .clipShape(Capsule())
+                .padding(.horizontal)
+                .padding(.top, 12)
+        }
+    }
+
+    // MARK: - Header
+
     private var headerSection: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 4) {
-                if let name = sighting.name, !name.isEmpty {
-                    Text(name)
-                        .font(.title2.bold())
+                if let name = live.name, !name.isEmpty {
+                    Text(name).font(.title2.bold())
                 }
                 Label(
-                    sighting.locationName ?? String(format: "%.5f, %.5f", sighting.latitude, sighting.longitude),
+                    live.locationName ?? String(format: "%.5f, %.5f", live.latitude, live.longitude),
                     systemImage: "location"
                 )
                 .font(.caption)
@@ -119,11 +147,8 @@ struct CatDetailView: View {
             Button { likeToggle() } label: {
                 VStack(spacing: 2) {
                     Image(systemName: isLiked ? "heart.fill" : "heart")
-                        .font(.title2)
-                        .foregroundStyle(.red)
-                    Text("\(likeCount)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(.title2).foregroundStyle(.red)
+                    Text("\(likeCount)").font(.caption).foregroundStyle(.secondary)
                 }
             }
         }
@@ -131,32 +156,31 @@ struct CatDetailView: View {
         .padding(.vertical, 12)
     }
 
+    // MARK: - Info
+
     private var infoSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            if !sighting.note.isEmpty {
-                Text(sighting.note)
-                    .font(.body)
+            if !live.note.isEmpty {
+                Text(live.note).font(.body)
             }
-
             Divider()
-
-            Label(sighting.date.formatted(date: .long, time: .shortened), systemImage: "calendar")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            Label(live.date.formatted(date: .long, time: .shortened), systemImage: "calendar")
+                .font(.caption).foregroundStyle(.secondary)
         }
         .padding(.horizontal)
         .padding(.bottom, 8)
     }
 
+    // MARK: - Mini map
+
     private var miniMapSection: some View {
         Map(position: .constant(.region(MKCoordinateRegion(
-            center: sighting.coordinate,
+            center: live.coordinate,
             span: MKCoordinateSpan(latitudeDelta: 0.005, longitudeDelta: 0.005)
         )))) {
-            Annotation("", coordinate: sighting.coordinate) {
+            Annotation("", coordinate: live.coordinate) {
                 Image(systemName: "pawprint.fill")
-                    .font(.title2)
-                    .foregroundStyle(.orange)
+                    .font(.title2).foregroundStyle(.orange)
             }
         }
         .frame(height: 180)
@@ -166,12 +190,30 @@ struct CatDetailView: View {
         .padding(.bottom)
     }
 
+    // MARK: - Helpers
+
     private func likeToggle() {
         let newLiked = !isLiked
         isLiked = newLiked
         likeCount += newLiked ? 1 : -1
-        Task {
-            try? await supabase.toggleLike(sighting)
+        Task { try? await supabase.toggleLike(live) }
+    }
+
+    private func statusColor(_ s: CatStatus) -> Color {
+        switch s {
+        case .healthy: return .green
+        case .injured: return .red
+        case .kitten:  return .blue
         }
+    }
+
+    private var addPhotoBinding: Binding<UIImage?> {
+        Binding(
+            get: { nil },
+            set: { image in
+                guard let image else { return }
+                Task { try? await supabase.addPhotos(to: live, images: [image]) }
+            }
+        )
     }
 }
