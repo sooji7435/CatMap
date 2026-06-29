@@ -9,8 +9,11 @@ final class SupabaseService {
     var isUploading = false
 
     private let client = SupabaseClient(
-        supabaseURL: URL(string: "https://YOUR_PROJECT_ID.supabase.co")!,
-        supabaseKey: "YOUR_ANON_KEY"
+        supabaseURL: URL(string: Config.supabaseURL)!,
+        supabaseKey: Config.supabaseKey,
+        options: SupabaseClientOptions(
+            auth: .init(emitLocalSessionAsInitialSession: true)
+        )
     )
     private var realtimeTask: Task<Void, Never>?
 
