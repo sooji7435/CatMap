@@ -85,6 +85,15 @@ struct ContentView: View {
             supabase.stopListening()
         }
         .onChange(of: supabase.sightings) { old, new in
+            // 삭제된 항목이면 미리보기 카드 닫기
+            if let preview = previewSighting, !new.contains(where: { $0.id == preview.id }) {
+                withAnimation(.spring(response: 0.3)) {
+                    previewSighting = nil
+                    detailSighting = nil
+                }
+            }
+
+            // 새 핀 등장 애니메이션
             let newIDs = Set(new.map(\.id)).subtracting(Set(old.map(\.id)))
             guard !newIDs.isEmpty else { return }
             withAnimation(.spring(response: 0.4, dampingFraction: 0.5)) {
