@@ -15,7 +15,7 @@ enum CatDetector {
             }
 
             let request = VNRecognizeAnimalsRequest { req, error in
-                if error != nil { resumeOnce(true); return }
+                if error != nil { resumeOnce(false); return }
                 let found = (req.results as? [VNRecognizedObjectObservation] ?? [])
                     .contains { $0.labels.contains { $0.identifier == "Cat" && $0.confidence > 0.5 } }
                 resumeOnce(found)
@@ -25,8 +25,7 @@ enum CatDetector {
             do {
                 try handler.perform([request])
             } catch {
-                // perform이 throw한 경우 completion이 이미 호출됐을 수 있으므로 resumeOnce 사용
-                resumeOnce(true)
+                resumeOnce(false)
             }
         }
     }

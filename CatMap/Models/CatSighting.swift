@@ -14,6 +14,7 @@ struct CatSighting: Identifiable, Codable, Equatable {
     var userId: UUID?
     var locationName: String?
     var status: String?
+    
 
     enum CodingKeys: String, CodingKey {
         case id, latitude, longitude, note, date, likes, name, status
@@ -26,6 +27,7 @@ struct CatSighting: Identifiable, Codable, Equatable {
     var firstPhotoURL: URL? { photoURLs.first.flatMap { URL(string: $0) } }
     var coordinate: CLLocationCoordinate2D { CLLocationCoordinate2D(latitude: latitude, longitude: longitude) }
     var catStatus: CatStatus? { status.flatMap { CatStatus(rawValue: $0) } }
+    var isNew: Bool { date > Date.now.addingTimeInterval(-7 * 24 * 3600) }
 }
 
 enum CatStatus: String, Codable, CaseIterable {

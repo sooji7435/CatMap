@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 private final class ImageCache {
     static let shared = ImageCache()
