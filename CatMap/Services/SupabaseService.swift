@@ -16,6 +16,7 @@ final class SupabaseService {
         )
     )
     private var realtimeTask: Task<Void, Never>?
+    private var realtimeChannel: RealtimeChannelV2?
 
     func startListening() {
         realtimeTask = Task {
@@ -27,6 +28,9 @@ final class SupabaseService {
     func stopListening() {
         realtimeTask?.cancel()
         realtimeTask = nil
+        let channel = realtimeChannel
+        realtimeChannel = nil
+        Task { await channel?.unsubscribe() }
     }
 
     private func loadSightings() async {
@@ -44,6 +48,7 @@ final class SupabaseService {
 
     private func listenForChanges() async {
         let channel = client.channel("sightings-realtime")
+        realtimeChannel = channel
         let changes = channel.postgresChange(AnyAction.self, schema: "public", table: "sightings")
         await channel.subscribe()
         for await _ in changes {
