@@ -173,10 +173,10 @@ final class SupabaseService {
         let wasLiked = UserDefaults.standard.bool(forKey: key)
         guard liked != wasLiked else { return }
 
-        try await client.rpc("toggle_like", params: [
-            "sighting_id": sighting.id.uuidString,
-            "liked": liked
-        ]).execute()
+        try await client.rpc("toggle_like", params: ToggleLikeParams(
+            sightingId: sighting.id,
+            liked: liked
+        )).execute()
 
         UserDefaults.standard.set(liked, forKey: key)
     }
@@ -203,6 +203,16 @@ private struct SightingInsert: Encodable {
         case photoStoragePaths = "photo_storage_paths"
         case userId = "user_id"
         case locationName = "location_name"
+    }
+}
+
+private struct ToggleLikeParams: Encodable {
+    let sightingId: UUID
+    let liked: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case sightingId = "sighting_id"
+        case liked
     }
 }
 
