@@ -150,7 +150,7 @@ struct AddCatView: View {
                 )
                 dismiss()
             } catch {
-                errorMessage = "저장에 실패했습니다. 다시 시도해 주세요."
+                errorMessage = error.localizedDescription
             }
         }
     }
