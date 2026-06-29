@@ -9,6 +9,10 @@ struct CatPreviewCard: View {
     @State private var isLiked = false
     @State private var likeCount = 0
 
+    private var live: CatSighting {
+        supabase.sightings.first { $0.id == sighting.id } ?? sighting
+    }
+
     var body: some View {
         HStack(spacing: 12) {
             thumbnail
@@ -22,14 +26,17 @@ struct CatPreviewCard: View {
         .shadow(color: .black.opacity(0.12), radius: 10, y: 4)
         .padding(.horizontal, 16)
         .onAppear {
-            isLiked = supabase.isLiked(sighting)
-            likeCount = sighting.likes
+            isLiked = supabase.isLiked(live)
+            likeCount = live.likes
+        }
+        .onChange(of: live.likes) { _, newValue in
+            likeCount = newValue
         }
     }
 
     private var thumbnail: some View {
         Group {
-            if let url = sighting.firstPhotoURL {
+            if let url = live.firstPhotoURL {
                 CachedAsyncImage(url: url)
                     .scaledToFill()
             } else {
@@ -47,21 +54,21 @@ struct CatPreviewCard: View {
 
     private var info: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text(sighting.name?.isEmpty == false ? sighting.name! : (sighting.note.isEmpty ? "이름 없는 고양이" : sighting.note))
+            Text(live.name?.isEmpty == false ? live.name! : (live.note.isEmpty ? "이름 없는 고양이" : live.note))
                 .font(.subheadline.bold())
                 .lineLimit(1)
-            if let name = sighting.locationName {
+            if let name = live.locationName {
                 Label(name, systemImage: "location")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
-                Text(sighting.date.formatted(date: .abbreviated, time: .shortened))
+                Text(live.date.formatted(date: .abbreviated, time: .shortened))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
-            if sighting.photoURLs.count > 1 {
-                Label("\(sighting.photoURLs.count)장", systemImage: "photo.on.rectangle")
+            if live.photoURLs.count > 1 {
+                Label("\(live.photoURLs.count)장", systemImage: "photo.on.rectangle")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -107,7 +114,7 @@ struct CatPreviewCard: View {
         isLiked = newLiked
         likeCount += newLiked ? 1 : -1
         Task {
-            try? await supabase.toggleLike(sighting)
+            try? await supabase.toggleLike(live)
         }
     }
 }

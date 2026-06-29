@@ -81,6 +81,9 @@ struct CatDetailView: View {
             isLiked = supabase.isLiked(sighting)
             likeCount = sighting.likes
         }
+        .onChange(of: live.likes) { _, newValue in
+            likeCount = newValue
+        }
     }
 
     // MARK: - Photo gallery with pinch zoom

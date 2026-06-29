@@ -205,13 +205,27 @@ struct AddCatView: View {
 
     private var locationSection: some View {
         Section("현재 위치") {
-            if locationManager.location != nil {
-                Label(locationName ?? "위치 확인 중...", systemImage: "location.fill")
-                    .font(.subheadline)
-                    .foregroundStyle(locationName == nil ? .secondary : .primary)
-            } else {
-                Label("위치를 가져오는 중...", systemImage: "location.circle")
-                    .foregroundStyle(.secondary)
+            switch locationManager.authorizationStatus {
+            case .denied, .restricted:
+                Label("위치 권한이 없습니다", systemImage: "location.slash.fill")
+                    .foregroundStyle(.red)
+                Button {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    Label("설정에서 허용하기", systemImage: "gear")
+                        .foregroundStyle(.orange)
+                }
+            default:
+                if locationManager.location != nil {
+                    Label(locationName ?? "위치 확인 중...", systemImage: "location.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(locationName == nil ? .secondary : .primary)
+                } else {
+                    Label("위치를 가져오는 중...", systemImage: "location.circle")
+                        .foregroundStyle(.secondary)
+                }
             }
         }
     }
