@@ -173,12 +173,10 @@ final class SupabaseService {
         let wasLiked = UserDefaults.standard.bool(forKey: key)
         guard liked != wasLiked else { return }
 
-        let newLikes = max(0, sighting.likes + (liked ? 1 : -1))
-        try await client
-            .from("sightings")
-            .update(["likes": newLikes])
-            .eq("id", value: sighting.id.uuidString)
-            .execute()
+        try await client.rpc("toggle_like", params: [
+            "sighting_id": sighting.id.uuidString,
+            "liked": liked
+        ]).execute()
 
         UserDefaults.standard.set(liked, forKey: key)
     }
