@@ -7,6 +7,7 @@ import UIKit
 final class SupabaseService {
     var sightings: [CatSighting] = []
     var isUploading = false
+    private(set) var currentUserId: UUID?
 
     private let client = SupabaseClient(
         supabaseURL: URL(string: Config.supabaseURL)!,
@@ -20,6 +21,7 @@ final class SupabaseService {
 
     func startListening() {
         realtimeTask = Task {
+            await signInIfNeeded()
             await loadSightings()
             await listenForChanges()
         }
@@ -31,6 +33,25 @@ final class SupabaseService {
         let channel = realtimeChannel
         realtimeChannel = nil
         Task { await channel?.unsubscribe() }
+    }
+
+    func isOwner(_ sighting: CatSighting) -> Bool {
+        guard let currentUserId, let sightingUserId = sighting.userId else { return false }
+        return currentUserId == sightingUserId
+    }
+
+    private func signInIfNeeded() async {
+        do {
+            let session = try await client.auth.session
+            currentUserId = session.user.id
+        } catch {
+            do {
+                let session = try await client.auth.signInAnonymously()
+                currentUserId = session.user.id
+            } catch {
+                print("Auth error: \(error)")
+            }
+        }
     }
 
     private func loadSightings() async {
@@ -86,7 +107,8 @@ final class SupabaseService {
                 longitude: longitude,
                 photoURLs: photoURLs,
                 photoStoragePaths: photoStoragePaths,
-                note: note
+                note: note,
+                userId: currentUserId
             ))
             .execute()
     }
@@ -130,10 +152,12 @@ private struct SightingInsert: Encodable {
     let photoURLs: [String]
     let photoStoragePaths: [String]
     let note: String
+    let userId: UUID?
 
     enum CodingKeys: String, CodingKey {
         case latitude, longitude, note
         case photoURLs = "photo_urls"
         case photoStoragePaths = "photo_storage_paths"
+        case userId = "user_id"
     }
 }
