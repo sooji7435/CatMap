@@ -14,18 +14,25 @@ enum CatDetector {
                 continuation.resume(returning: value)
             }
 
-            let request = VNRecognizeAnimalsRequest { req, error in
-                if error != nil { resumeOnce(false); return }
-                let found = (req.results as? [VNRecognizedObjectObservation] ?? [])
-                    .contains { $0.labels.contains { $0.identifier == "Cat" && $0.confidence > 0.5 } }
-                resumeOnce(found)
-            }
+            DispatchQueue.global(qos: .userInitiated).async {
+                let request = VNRecognizeAnimalsRequest { req, error in
+                    if let error { print("[CatDetector] error: \(error)"); resumeOnce(false); return }
+                    let observations = req.results as? [VNRecognizedObjectObservation] ?? []
+                    let found = observations.contains { obs in
+                        obs.labels.contains { $0.identifier.lowercased() == "cat" && $0.confidence > 0.3 }
+                    }
+                    resumeOnce(found)
+                }
+                // Neural Engine은 시뮬레이터 미지원 → CPU 전용 모드로 실행
+                request.usesCPUOnly = true
 
-            let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
-            do {
-                try handler.perform([request])
-            } catch {
-                resumeOnce(false)
+                let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+                do {
+                    try handler.perform([request])
+                } catch {
+                    print("[CatDetector] perform error: \(error)")
+                    resumeOnce(false)
+                }
             }
         }
     }
