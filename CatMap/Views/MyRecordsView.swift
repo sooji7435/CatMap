@@ -28,6 +28,13 @@ struct MyRecordsView: View {
                 row(for: sighting)
             }
             .listRowBackground(Color.clear)
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                Button(role: .destructive) {
+                    Task { try? await supabase.deleteSighting(sighting) }
+                } label: {
+                    Label("삭제", systemImage: "trash")
+                }
+            }
         }
         .listStyle(.plain)
     }
