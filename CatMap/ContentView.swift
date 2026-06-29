@@ -56,6 +56,7 @@ struct ContentView: View {
             pinScale = pinScaleFactor(for: context.camera.distance)
             cameraDistance = context.camera.distance
         }
+        .tint(.orange)
         .ignoresSafeArea()
         .overlay(alignment: .topTrailing) {
             VStack(spacing: 8) {
