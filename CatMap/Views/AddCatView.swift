@@ -31,12 +31,6 @@ struct AddCatView: View {
                 statusSection
                 noteSection
                 locationSection
-
-                if let error = errorMessage {
-                    Section {
-                        Text(error).foregroundStyle(.red).font(.caption)
-                    }
-                }
             }
             .navigationTitle("길냥이 등록")
             .navigationBarTitleDisplayMode(.inline)
@@ -77,6 +71,11 @@ struct AddCatView: View {
             }
             .sheet(isPresented: $showGallery) {
                 ImagePicker(image: photoBinding, sourceType: .photoLibrary).ignoresSafeArea()
+            }
+            .alert("저장 실패", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
+                Button("확인", role: .cancel) { errorMessage = nil }
+            } message: {
+                Text(errorMessage ?? "")
             }
         }
     }

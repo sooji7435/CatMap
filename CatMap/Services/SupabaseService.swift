@@ -64,7 +64,7 @@ final class SupabaseService {
             sightings = try await client
                 .from("sightings")
                 .select()
-                .order("date", ascending: true)
+                .order("date", ascending: false)
                 .execute()
                 .value
         } catch {

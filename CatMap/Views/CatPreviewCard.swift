@@ -13,6 +13,11 @@ struct CatPreviewCard: View {
         supabase.sightings.first { $0.id == sighting.id } ?? sighting
     }
 
+    private var displayTitle: String {
+        if let name = live.name, !name.isEmpty { return name }
+        return live.note.isEmpty ? "이름 없는 고양이" : live.note
+    }
+
     var body: some View {
         HStack(spacing: 12) {
             thumbnail
@@ -54,7 +59,7 @@ struct CatPreviewCard: View {
 
     private var info: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text(live.name?.isEmpty == false ? live.name! : (live.note.isEmpty ? "이름 없는 고양이" : live.note))
+            Text(displayTitle)
                 .font(.subheadline.bold())
                 .lineLimit(1)
             if let name = live.locationName {

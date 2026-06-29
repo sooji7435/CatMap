@@ -9,32 +9,22 @@ struct ZoomableAsyncImage: View {
     @State private var lastOffset: CGSize = .zero
 
     var body: some View {
-        AsyncImage(url: url) { phase in
-            switch phase {
-            case .success(let image):
-                image
-                    .resizable()
-                    .scaledToFit()
-                    .scaleEffect(scale)
-                    .offset(offset)
-                    .gesture(zoomGesture.simultaneously(with: dragGesture))
-                    .onTapGesture(count: 2) {
-                        withAnimation(.spring()) {
-                            if scale > 1 {
-                                scale = 1; lastScale = 1
-                                offset = .zero; lastOffset = .zero
-                            } else {
-                                scale = 2.5; lastScale = 2.5
-                            }
-                        }
+        CachedAsyncImage(url: url)
+            .scaledToFit()
+            .scaleEffect(scale)
+            .offset(offset)
+            .gesture(zoomGesture)
+            .simultaneousGesture(dragGesture)
+            .onTapGesture(count: 2) {
+                withAnimation(.spring()) {
+                    if scale > 1 {
+                        scale = 1; lastScale = 1
+                        offset = .zero; lastOffset = .zero
+                    } else {
+                        scale = 2.5; lastScale = 2.5
                     }
-            case .failure:
-                Color.gray.opacity(0.15)
-                    .overlay(Image(systemName: "photo").font(.largeTitle).foregroundStyle(.secondary))
-            default:
-                Color.gray.opacity(0.1).overlay(ProgressView())
+                }
             }
-        }
     }
 
     private var zoomGesture: some Gesture {
@@ -55,6 +45,9 @@ struct ZoomableAsyncImage: View {
                     height: lastOffset.height + value.translation.height
                 )
             }
-            .onEnded { _ in lastOffset = offset }
+            .onEnded { _ in
+                guard scale > 1 else { return }
+                lastOffset = offset
+            }
     }
 }

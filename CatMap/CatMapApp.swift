@@ -1,10 +1,3 @@
-//
-//  CatMapApp.swift
-//  CatMap
-//
-//  Created by 박윤수 on 6/29/26.
-//
-
 import SwiftUI
 
 @main
@@ -14,9 +7,19 @@ struct CatMapApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environment(supabase)
-                .environment(locationManager)
+            TabView {
+                ContentView()
+                    .tabItem { Label("지도", systemImage: "map.fill") }
+                MyRecordsView()
+                    .tabItem { Label("내 기록", systemImage: "pawprint.fill") }
+            }
+            .environment(supabase)
+            .environment(locationManager)
+            .onAppear {
+                locationManager.requestPermission()
+                supabase.startListening()
+            }
+            .onDisappear { supabase.stopListening() }
         }
     }
 }

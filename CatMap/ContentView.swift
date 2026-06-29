@@ -25,11 +25,6 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showAddCat) { AddCatView() }
         .sheet(item: $detailSighting) { CatDetailView(sighting: $0) }
-        .onAppear {
-            locationManager.requestPermission()
-            supabase.startListening()
-        }
-        .onDisappear { supabase.stopListening() }
         .onChange(of: supabase.sightings, handleSightingsChange)
     }
 
@@ -63,6 +58,7 @@ struct ContentView: View {
             cameraDistance = context.camera.distance
         }
         .ignoresSafeArea()
+        .overlay(alignment: .top) { catCountBadge }
         .overlay(alignment: .topTrailing) { refreshButton }
     }
 
@@ -84,6 +80,23 @@ struct ContentView: View {
     }
 
     // MARK: - Subviews
+
+    @ViewBuilder
+    private var catCountBadge: some View {
+        if !supabase.sightings.isEmpty {
+            HStack(spacing: 4) {
+                Image(systemName: "pawprint.fill").font(.caption2)
+                Text("\(supabase.sightings.count)마리")
+                    .font(.caption.bold())
+            }
+            .foregroundStyle(.orange)
+            .padding(.horizontal, 10).padding(.vertical, 5)
+            .background(.thinMaterial)
+            .clipShape(Capsule())
+            .shadow(color: .black.opacity(0.1), radius: 3, y: 1)
+            .padding(.top, 56)
+        }
+    }
 
     private var refreshButton: some View {
         Button {
