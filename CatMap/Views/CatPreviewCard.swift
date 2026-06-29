@@ -1,0 +1,118 @@
+import SwiftUI
+
+struct CatPreviewCard: View {
+    let sighting: CatSighting
+    let onDetail: () -> Void
+    let onDismiss: () -> Void
+
+    @Environment(SupabaseService.self) private var supabase
+    @State private var isLiked = false
+    @State private var likeCount = 0
+
+    var body: some View {
+        HStack(spacing: 12) {
+            thumbnail
+            info
+            Spacer()
+            actions
+        }
+        .padding(14)
+        .background(.regularMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .shadow(color: .black.opacity(0.12), radius: 10, y: 4)
+        .padding(.horizontal, 16)
+        .onAppear {
+            isLiked = supabase.isLiked(sighting)
+            likeCount = sighting.likes
+        }
+    }
+
+    private var thumbnail: some View {
+        Group {
+            if let url = sighting.firstPhotoURL {
+                AsyncImage(url: url) { phase in
+                    if case .success(let image) = phase {
+                        image.resizable().scaledToFill()
+                    } else {
+                        catPlaceholder
+                    }
+                }
+            } else {
+                catPlaceholder
+            }
+        }
+        .frame(width: 70, height: 70)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    private var catPlaceholder: some View {
+        Color.orange.opacity(0.25)
+            .overlay(Text("🐱").font(.largeTitle))
+    }
+
+    private var info: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            if !sighting.note.isEmpty {
+                Text(sighting.note)
+                    .font(.subheadline.bold())
+                    .lineLimit(1)
+            } else {
+                Text("길냥이")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.secondary)
+            }
+            Text(sighting.date.formatted(date: .abbreviated, time: .shortened))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            if sighting.photoURLs.count > 1 {
+                Label("\(sighting.photoURLs.count)장", systemImage: "photo.on.rectangle")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Button {
+                likeToggle()
+            } label: {
+                HStack(spacing: 3) {
+                    Image(systemName: isLiked ? "heart.fill" : "heart")
+                        .foregroundStyle(.red)
+                    Text("\(likeCount)")
+                }
+                .font(.caption)
+            }
+        }
+    }
+
+    private var actions: some View {
+        VStack(spacing: 8) {
+            Button(action: onDetail) {
+                Text("자세히")
+                    .font(.caption.bold())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .background(.orange)
+                    .clipShape(Capsule())
+            }
+
+            Button(action: onDismiss) {
+                Image(systemName: "xmark")
+                    .font(.caption.bold())
+                    .foregroundStyle(.secondary)
+                    .frame(width: 28, height: 28)
+                    .background(Color(.systemGray5))
+                    .clipShape(Circle())
+            }
+        }
+    }
+
+    private func likeToggle() {
+        let newLiked = !isLiked
+        isLiked = newLiked
+        likeCount += newLiked ? 1 : -1
+        Task {
+            try? await supabase.toggleLike(sighting)
+        }
+    }
+}

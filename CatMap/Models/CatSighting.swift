@@ -5,15 +5,20 @@ struct CatSighting: Identifiable, Codable {
     var id: UUID
     var latitude: Double
     var longitude: Double
-    var photoURL: String?
-    var photoStoragePath: String?
+    var photoURLs: [String]
+    var photoStoragePaths: [String]
     var note: String
     var date: Date
+    var likes: Int
 
     enum CodingKeys: String, CodingKey {
-        case id, latitude, longitude, note, date
-        case photoURL = "photo_url"
-        case photoStoragePath = "photo_storage_path"
+        case id, latitude, longitude, note, date, likes
+        case photoURLs = "photo_urls"
+        case photoStoragePaths = "photo_storage_paths"
+    }
+
+    var firstPhotoURL: URL? {
+        photoURLs.first.flatMap { URL(string: $0) }
     }
 
     var coordinate: CLLocationCoordinate2D {

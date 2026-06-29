@@ -8,12 +8,14 @@ struct CatDetailView: View {
     let sighting: CatSighting
 
     @State private var showDeleteAlert = false
+    @State private var isLiked = false
+    @State private var likeCount = 0
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    photoSection
+                    photoGallery
                     infoSection
                     miniMapSection
                 }
@@ -45,26 +47,52 @@ struct CatDetailView: View {
                 Text("이 길냥이 기록이 삭제됩니다.")
             }
         }
+        .onAppear {
+            isLiked = supabase.isLiked(sighting)
+            likeCount = sighting.likes
+        }
     }
 
     @ViewBuilder
-    private var photoSection: some View {
-        if let urlString = sighting.photoURL, let url = URL(string: urlString) {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxWidth: .infinity)
-                case .failure:
-                    Color.gray.opacity(0.2)
-                        .frame(height: 200)
-                        .overlay(Image(systemName: "photo").font(.largeTitle).foregroundStyle(.secondary))
-                default:
-                    Color.gray.opacity(0.1)
-                        .frame(height: 200)
-                        .overlay(ProgressView())
+    private var photoGallery: some View {
+        if !sighting.photoURLs.isEmpty {
+            TabView {
+                ForEach(sighting.photoURLs, id: \.self) { urlString in
+                    if let url = URL(string: urlString) {
+                        AsyncImage(url: url) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(maxWidth: .infinity)
+                            case .failure:
+                                Color.gray.opacity(0.15)
+                                    .overlay(
+                                        Image(systemName: "photo")
+                                            .font(.largeTitle)
+                                            .foregroundStyle(.secondary)
+                                    )
+                            default:
+                                Color.gray.opacity(0.1)
+                                    .overlay(ProgressView())
+                            }
+                        }
+                    }
+                }
+            }
+            .tabViewStyle(.page)
+            .frame(height: 300)
+            .overlay(alignment: .bottomTrailing) {
+                if sighting.photoURLs.count > 1 {
+                    Text("\(sighting.photoURLs.count)장")
+                        .font(.caption.bold())
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(.black.opacity(0.45))
+                        .clipShape(Capsule())
+                        .padding(10)
                 }
             }
         }
@@ -75,6 +103,21 @@ struct CatDetailView: View {
             if !sighting.note.isEmpty {
                 Text(sighting.note)
                     .font(.body)
+            }
+
+            Button {
+                likeToggle()
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: isLiked ? "heart.fill" : "heart")
+                        .foregroundStyle(.red)
+                        .font(.title3)
+                    Text(isLiked ? "좋아요 취소" : "좋아요")
+                        .font(.subheadline)
+                    Text("(\(likeCount))")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Divider()
@@ -108,5 +151,14 @@ struct CatDetailView: View {
         .allowsHitTesting(false)
         .padding(.horizontal)
         .padding(.bottom)
+    }
+
+    private func likeToggle() {
+        let newLiked = !isLiked
+        isLiked = newLiked
+        likeCount += newLiked ? 1 : -1
+        Task {
+            try? await supabase.toggleLike(sighting)
+        }
     }
 }

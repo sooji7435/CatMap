@@ -7,21 +7,42 @@
 
 import SwiftUI
 import MapKit
+import CoreLocation
 
 struct ContentView: View {
     @Environment(SupabaseService.self) private var supabase
     @Environment(LocationManager.self) private var locationManager
     @State private var cameraPosition: MapCameraPosition = .userLocation(fallback: .automatic)
     @State private var showAddCat = false
-    @State private var selectedSighting: CatSighting?
+    @State private var previewSighting: CatSighting?
+    @State private var detailSighting: CatSighting?
+    @State private var filterKm: Double? = nil
+    @State private var animatingIDs: Set<UUID> = []
+
+    private var filteredSightings: [CatSighting] {
+        guard let km = filterKm, let location = locationManager.location else {
+            return supabase.sightings
+        }
+        return supabase.sightings.filter { sighting in
+            let loc = CLLocation(latitude: sighting.latitude, longitude: sighting.longitude)
+            return location.distance(from: loc) <= km * 1000
+        }
+    }
 
     var body: some View {
-        ZStack(alignment: .bottomTrailing) {
+        ZStack(alignment: .bottom) {
             Map(position: $cameraPosition) {
-                ForEach(supabase.sightings) { sighting in
+                ForEach(filteredSightings) { sighting in
                     Annotation("", coordinate: sighting.coordinate) {
-                        CatPinView(sighting: sighting)
-                            .onTapGesture { selectedSighting = sighting }
+                        CatPinView(
+                            sighting: sighting,
+                            isAnimating: animatingIDs.contains(sighting.id)
+                        )
+                        .onTapGesture {
+                            withAnimation(.spring(response: 0.3)) {
+                                previewSighting = sighting
+                            }
+                        }
                     }
                 }
                 UserAnnotation()
@@ -32,7 +53,67 @@ struct ContentView: View {
                 MapScaleView()
             }
             .ignoresSafeArea()
+            .overlay(alignment: .top) { filterBar }
 
+            if let sighting = previewSighting {
+                CatPreviewCard(
+                    sighting: sighting,
+                    onDetail: { detailSighting = sighting },
+                    onDismiss: {
+                        withAnimation(.spring(response: 0.3)) {
+                            previewSighting = nil
+                        }
+                    }
+                )
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .padding(.bottom, 24)
+            } else {
+                addButton
+            }
+        }
+        .sheet(isPresented: $showAddCat) {
+            AddCatView()
+        }
+        .sheet(item: $detailSighting) { sighting in
+            CatDetailView(sighting: sighting)
+        }
+        .onAppear {
+            locationManager.requestPermission()
+            supabase.startListening()
+        }
+        .onDisappear {
+            supabase.stopListening()
+        }
+        .onChange(of: supabase.sightings) { old, new in
+            let newIDs = Set(new.map(\.id)).subtracting(Set(old.map(\.id)))
+            guard !newIDs.isEmpty else { return }
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.5)) {
+                animatingIDs = animatingIDs.union(newIDs)
+            }
+            Task {
+                try? await Task.sleep(for: .seconds(0.8))
+                animatingIDs = animatingIDs.subtracting(newIDs)
+            }
+        }
+    }
+
+    private var filterBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                FilterChip(title: "전체", isSelected: filterKm == nil) { filterKm = nil }
+                FilterChip(title: "500m", isSelected: filterKm == 0.5) { filterKm = 0.5 }
+                FilterChip(title: "1km", isSelected: filterKm == 1.0) { filterKm = 1.0 }
+                FilterChip(title: "5km", isSelected: filterKm == 5.0) { filterKm = 5.0 }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+        }
+        .background(.ultraThinMaterial)
+    }
+
+    private var addButton: some View {
+        HStack {
+            Spacer()
             Button {
                 showAddCat = true
             } label: {
@@ -46,27 +127,22 @@ struct ContentView: View {
             }
             .padding(24)
         }
-        .sheet(isPresented: $showAddCat) {
-            AddCatView()
-        }
-        .sheet(item: $selectedSighting) { sighting in
-            CatDetailView(sighting: sighting)
-        }
-        .onAppear {
-            locationManager.requestPermission()
-            supabase.startListening()
-        }
-        .onDisappear {
-            supabase.stopListening()
-        }
     }
 }
 
 struct CatPinView: View {
     let sighting: CatSighting
+    let isAnimating: Bool
 
     var body: some View {
-        if let urlString = sighting.photoURL, let url = URL(string: urlString) {
+        pinContent
+            .scaleEffect(isAnimating ? 1.35 : 1.0)
+            .animation(.spring(response: 0.4, dampingFraction: 0.5), value: isAnimating)
+    }
+
+    @ViewBuilder
+    private var pinContent: some View {
+        if let url = sighting.firstPhotoURL {
             AsyncImage(url: url) { phase in
                 switch phase {
                 case .success(let image):
@@ -94,6 +170,25 @@ struct CatPinView: View {
                 .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
             Text("🐱")
                 .font(.title3)
+        }
+    }
+}
+
+struct FilterChip: View {
+    let title: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.subheadline.bold())
+                .foregroundStyle(isSelected ? .white : .primary)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 7)
+                .background(isSelected ? Color.orange : Color(.systemBackground))
+                .clipShape(Capsule())
+                .shadow(color: .black.opacity(0.08), radius: 3, y: 1)
         }
     }
 }

@@ -6,34 +6,68 @@ struct AddCatView: View {
     @Environment(SupabaseService.self) private var supabase
     @Environment(LocationManager.self) private var locationManager
 
-    @State private var selectedImage: UIImage?
+    @State private var selectedImages: [UIImage] = []
     @State private var note = ""
     @State private var showCamera = false
     @State private var showGallery = false
     @State private var showSourcePicker = false
     @State private var errorMessage: String?
 
+    private let maxPhotos = 5
+
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    if let image = selectedImage {
-                        Image(uiImage: image)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(maxHeight: 260)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .listRowInsets(EdgeInsets())
-                    }
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 10) {
+                            ForEach(Array(selectedImages.enumerated()), id: \.offset) { index, image in
+                                ZStack(alignment: .topTrailing) {
+                                    Image(uiImage: image)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 80, height: 80)
+                                        .clipShape(RoundedRectangle(cornerRadius: 10))
 
-                    Button {
-                        showSourcePicker = true
-                    } label: {
-                        Label(
-                            selectedImage == nil ? "사진 추가" : "사진 변경",
-                            systemImage: "camera"
-                        )
+                                    Button {
+                                        selectedImages.remove(at: index)
+                                    } label: {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .symbolRenderingMode(.palette)
+                                            .foregroundStyle(.white, Color.black.opacity(0.55))
+                                            .font(.title3)
+                                    }
+                                    .offset(x: 6, y: -6)
+                                }
+                            }
+
+                            if selectedImages.count < maxPhotos {
+                                Button {
+                                    showSourcePicker = true
+                                } label: {
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(Color(.systemGray6))
+                                        .frame(width: 80, height: 80)
+                                        .overlay {
+                                            VStack(spacing: 4) {
+                                                Image(systemName: "plus")
+                                                    .font(.title2)
+                                                Text("추가")
+                                                    .font(.caption2)
+                                            }
+                                            .foregroundStyle(.secondary)
+                                        }
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(.vertical, 6)
                     }
+                    .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
+
+                    Text("\(selectedImages.count) / \(maxPhotos)장")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
 
                 Section("메모 (선택)") {
@@ -75,7 +109,7 @@ struct AddCatView: View {
                         ProgressView()
                     } else {
                         Button("저장") { save() }
-                            .disabled(selectedImage == nil || locationManager.location == nil)
+                            .disabled(selectedImages.isEmpty || locationManager.location == nil)
                             .bold()
                     }
                 }
@@ -86,14 +120,21 @@ struct AddCatView: View {
                 Button("취소", role: .cancel) {}
             }
             .sheet(isPresented: $showCamera) {
-                ImagePicker(image: $selectedImage, sourceType: .camera)
+                ImagePicker(image: singleImageBinding, sourceType: .camera)
                     .ignoresSafeArea()
             }
             .sheet(isPresented: $showGallery) {
-                ImagePicker(image: $selectedImage, sourceType: .photoLibrary)
+                ImagePicker(image: singleImageBinding, sourceType: .photoLibrary)
                     .ignoresSafeArea()
             }
         }
+    }
+
+    private var singleImageBinding: Binding<UIImage?> {
+        Binding(
+            get: { nil },
+            set: { if let img = $0 { selectedImages.append(img) } }
+        )
     }
 
     private func save() {
@@ -104,7 +145,7 @@ struct AddCatView: View {
                 try await supabase.addSighting(
                     latitude: location.coordinate.latitude,
                     longitude: location.coordinate.longitude,
-                    image: selectedImage,
+                    images: selectedImages,
                     note: note
                 )
                 dismiss()
